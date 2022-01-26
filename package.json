@@ -1,0 +1,21 @@
+{
+	"name": "serialized-db",
+	"version": "1.0.0",
+	"description": "A simple, compact, zero-dependency, efficiency-based database for JS devs",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"keywords": [
+		"database",
+		"json",
+		"object",
+		"serialized",
+		"efficient",
+		"fast",
+		"best"
+	],
+	"type": "module",
+	"author": "Codezilluh",
+	"license": "BSD-3-Clause"
+}
