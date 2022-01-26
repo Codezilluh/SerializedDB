@@ -33,7 +33,7 @@ const mainSchema = new DatabaseSchema({
 	// You can store arrays of schemas
 	posts: [postSchema],
 	// You can store an object as a schema
-	currentPos: vectorSchema
+	currentPos: vectorSchema,
 	lastPos: vectorSchema
 });
 
@@ -90,7 +90,7 @@ db.write();
 db.get("posts.0.likes"); // 23
 ```
 ## Conclusion
-Depending on the type of data, results will vary with serialization. However, there will never be a case where storing as JSON is smaller than storing in a serialized form. This package works best with numbers and booleans (things that in string form take up around 1 byte per character). A more string heavy project (currently) won't notice a huge difference as there isn't much serialization that can be done with strings. Projects that rely heavily on numbers and booleans can see compression rates into the high 90s. My favorite part of this project is the boolean storage. Rather than storing a boolean as one byte or a 5 character string, this package stores each boolean in 1 bit (as it should be). The only catch is that I had to use bytes to store the bits (I couldn't just have a schema that was 23B with 2b strung along). This isn't too big of a deal and the more booleans you use, the less of an impact it is. Storing one boolean takes a byte, storing two takes a byte, storing eight takes a byte, storing 10 takes two bytes, and so on. It is a lot better than 10 booleans taking up 10 bytes or 5 booleans taking up 25 bytes. I look forward to using this package in my own projects and I hope you enjoy it too.
+Depending on the type of data, results will vary with serialization. This package works best with numbers and booleans (things that in string form take up around 1 byte per character). A more string heavy project (currently) won't notice a huge difference as there isn't much serialization that can be done with strings. Projects that rely heavily on numbers and booleans can see compression rates into the high 90s. My favorite part of this project is the boolean storage. Rather than storing a boolean as one byte or a 5 character string, this package stores each boolean in 1 bit (as it should be). The only catch is that I had to use bytes to store the bits (I couldn't just have a schema that was 23B with 2b strung along). This isn't too big of a deal and the more booleans you use, the less of an impact it is. Storing one boolean takes a byte, storing two takes a byte, storing eight takes a byte, storing 10 takes two bytes, and so on. It is a lot better than 10 booleans taking up 10 bytes or 5 booleans taking up 25 bytes. I look forward to using this package in my own projects and I hope you enjoy it too.
 ## To-do
 - Create dynamic-lengthed strings (they wouldn't play nicely with arrays)
 - Add optional zipping of the database file (would help compress paragraphs)
