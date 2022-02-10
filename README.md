@@ -72,20 +72,20 @@ With the Database initialized you can now start adding data.
 // Check to see if the database is empty
 // Only template the database if it is empty to avoid data loss
 if (db.noData) {
-	// It is important to template the database before you try modifying it
-	d.template({
-		firstName: "",
-		lastName: "",
-		...
-		proMember: false,
-		...
-		posts: [], // you can keep the arrays empty
-		...
-		lastPos: { // assuming vectorSchema had this structure
-			lat: 0,
-			long: 0
-		}
-	});
+  // It is important to template the database before you try modifying it
+  d.template({
+    firstName: "",
+    lastName: "",
+    ...
+    proMember: false,
+    ...
+    posts: [], // you can keep the arrays empty
+    ...
+    lastPos: { // assuming vectorSchema had this structure
+      lat: 0,
+      long: 0
+    }
+  });
 }
 
 // Once the database has been templated, you can modify data at your will
@@ -94,9 +94,9 @@ db.set("lastPos.lat", 45.6);
 
 // Pushed objects must match the schema of their array
 db.push("posts", { // assuming you have made a postSchema
-	title: "Boring Day",
-	body: "My boring day was so boring tha...",
-	likes: 23
+  title: "Boring Day",
+  body: "My boring day was so boring tha...",
+  likes: 23
 });
 
 // If you disabled "shouldAutoWrite" you need to write after set and push
