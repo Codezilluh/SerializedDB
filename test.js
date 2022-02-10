@@ -1,4 +1,4 @@
-import { Database, DatabaseSchema } from "./index.js";
+import { checkSchemaId, Database, DatabaseSchema } from "./index.js";
 
 const pSchema = new DatabaseSchema({
 	x: "int32",
@@ -43,6 +43,7 @@ let equal =
 	JSON.stringify(mainSchema.deserialize(mainSchema.serialize(data))).length;
 let compressionRate =
 	mainSchema.serialize(data).byteLength / JSON.stringify(data).length;
+let idsMatch = checkSchemaId(mainSchema.serialize(data)) == mainSchema.schemaId;
 
 console.log(
 	`Storing this data as a string is ${sizeDiff}B larger than using schemas.`
@@ -57,4 +58,5 @@ console.log(
 		Math.round((1 - compressionRate) * 10000) / 100
 	}%`
 );
+console.log(`The schema ids do${idsMatch ? "" : "n't"} match`);
 console.log(mainSchema.deserialize(mainSchema.serialize(data)));

@@ -11,6 +11,15 @@ const toArrayBuffer = (buf) => {
 	}
 	return ab;
 };
+const hashCode = (e) => {
+	var hash = 0;
+	for (var i = 0; i < e.length; i++) {
+		var character = e.charCodeAt(i);
+		hash = (hash << 5) - hash + character;
+		hash = hash & hash; // Convert to 32bit integer
+	}
+	return hash;
+};
 
 export default class DatabaseSchema {
 	constructor(template) {
@@ -21,6 +30,9 @@ export default class DatabaseSchema {
 				(e) => typeof e == "string" && e.toLowerCase() == "boolean"
 			)
 		).length;
+		this.schemaId = hashCode(JSON.stringify(template).replace(/"|,|:/g, ""))
+			.toString(16)
+			.replace("-", "M");
 	}
 
 	_getByteLength(data, temp) {
@@ -74,12 +86,20 @@ export default class DatabaseSchema {
 		return Math.ceil(length);
 	}
 
-	serialize(data) {
-		let buf = new ArrayBuffer(this._getByteLength(data));
+	serialize(data, r = false) {
+		let buf = new ArrayBuffer(this._getByteLength(data) + (r ? 0 : 4));
 		let view = new DataView(buf);
 
 		let boolArray = [];
 		let offset = 0;
+
+		if (!r) {
+			view.setInt32(
+				offset,
+				parseInt(this.schemaId.replace("M", "-"), 16)
+			);
+			offset += 4;
+		}
 
 		try {
 			Object.entries(this._template)
@@ -221,7 +241,7 @@ export default class DatabaseSchema {
 							break;
 						}
 						case "schema": {
-							let struct = tempValue.serialize(value);
+							let struct = tempValue.serialize(value, true);
 
 							view.setUint16(
 								offset,
@@ -243,7 +263,10 @@ export default class DatabaseSchema {
 							offset += 2;
 
 							forEach(value, (value) => {
-								let struct = tempValue[0].serialize(value);
+								let struct = tempValue[0].serialize(
+									value,
+									true
+								);
 
 								view.setUint16(
 									offset,
@@ -282,9 +305,9 @@ export default class DatabaseSchema {
 		return Buffer.from(buf);
 	}
 
-	deserialize(buffer) {
+	deserialize(buffer, r = false) {
 		let view = new DataView(toArrayBuffer(buffer));
-		let offset = 0;
+		let offset = r ? 0 : 4;
 		let boolArrayKeys = [];
 		let data = {};
 
@@ -449,7 +472,8 @@ export default class DatabaseSchema {
 							...data,
 							[key]: {
 								...tempValue.deserialize(
-									Buffer.from(structBuffer)
+									Buffer.from(structBuffer),
+									true
 								)
 							}
 						};
@@ -477,7 +501,8 @@ export default class DatabaseSchema {
 
 							data[key].push(
 								tempValue[0].deserialize(
-									Buffer.from(structBuffer)
+									Buffer.from(structBuffer),
+									true
 								)
 							);
 
@@ -509,3 +534,9 @@ export default class DatabaseSchema {
 		return data;
 	}
 }
+
+export const checkSchemaId = (buffer) => {
+	let view = new DataView(toArrayBuffer(buffer));
+
+	return view.getInt32(0).toString(16).replace("-", "M");
+};
