@@ -34,7 +34,7 @@ export default class DatabaseSchema {
 				typeof value == "object" &&
 				typeof value._getByteLength == "function"
 			) {
-				length += value._getByteLength();
+				length += value._getByteLength(data[key]) + 2;
 
 				return;
 			}
@@ -47,7 +47,7 @@ export default class DatabaseSchema {
 				data
 			) {
 				length +=
-					value[0]._getByteLength(data[key], value[0]._template) *
+					(value[0]._getByteLength(data[key][0]) + 2) *
 						data[key].length +
 					2;
 
@@ -55,11 +55,9 @@ export default class DatabaseSchema {
 			}
 
 			// Add two bytes to length
-			if (
-				(value == "string" || value == "string_small") &&
-				!value.stringLength
-			)
+			if (value == "string_big" || value == "string") {
 				length += 2;
+			}
 
 			// Default
 			length +=
@@ -67,7 +65,9 @@ export default class DatabaseSchema {
 				(value.type
 					? value.stringLength || 1
 					: data && data[key]
-					? data[key].length || 1
+					? typeof data[key] == "string"
+						? data[key].length || 1
+						: 1
 					: 1);
 		});
 
@@ -89,6 +89,7 @@ export default class DatabaseSchema {
 					let value = data[key];
 					let decimalSpots = 0;
 					let stringLength = 0;
+					let dynamic = false;
 
 					// Should some customization be done to this type?
 					if (
@@ -108,6 +109,13 @@ export default class DatabaseSchema {
 					} else {
 						if (typeof typeName == "string") {
 							typeName = typeName.toLowerCase();
+
+							if (
+								typeName == "string_big" ||
+								typeName == "string"
+							) {
+								dynamic = true;
+							}
 						} else if (
 							typeof typeName._getByteLength == "function"
 						) {
@@ -127,7 +135,6 @@ export default class DatabaseSchema {
 						case "uint8": {
 							view.setUint8(offset, value);
 							offset += typeData.byteLength;
-
 							break;
 						}
 						case "uint16": {
@@ -165,20 +172,44 @@ export default class DatabaseSchema {
 							offset += typeData.byteLength;
 							break;
 						}
-						case "string": {
-							// Iterate over available letters
-							for (let i = 0; i < stringLength; i++) {
-								view.setUint16(offset, value.charCodeAt(i));
-								offset += typeData.byteLength;
+						case "string_big": {
+							if (dynamic) {
+								// Set string length
+								view.setUint16(offset, value.length);
+								offset += 2;
+
+								// Iterate over all letters
+								for (let i = 0; i < value.length; i++) {
+									view.setUint16(offset, value.charCodeAt(i));
+									offset += typeData.byteLength;
+								}
+							} else {
+								// Iterate over available letters
+								for (let i = 0; i < stringLength; i++) {
+									view.setUint16(offset, value.charCodeAt(i));
+									offset += typeData.byteLength;
+								}
 							}
 
 							break;
 						}
-						case "string_small": {
-							// Iterate over available letters
-							for (let i = 0; i < stringLength; i++) {
-								view.setUint8(offset, value.charCodeAt(i));
-								offset += typeData.byteLength;
+						case "string": {
+							if (dynamic) {
+								// Set string length
+								view.setUint16(offset, value.length);
+								offset += 2;
+
+								// Iterate over all letters
+								for (let i = 0; i < value.length; i++) {
+									view.setUint8(offset, value.charCodeAt(i));
+									offset += typeData.byteLength;
+								}
+							} else {
+								// Iterate over available letters
+								for (let i = 0; i < stringLength; i++) {
+									view.setUint8(offset, value.charCodeAt(i));
+									offset += typeData.byteLength;
+								}
 							}
 
 							break;
@@ -191,6 +222,12 @@ export default class DatabaseSchema {
 						}
 						case "schema": {
 							let struct = tempValue.serialize(value);
+
+							view.setUint16(
+								offset,
+								tempValue._getByteLength(value)
+							);
+							offset += 2;
 
 							// Append each serialized byte
 							forEach(struct, (byte) => {
@@ -207,6 +244,12 @@ export default class DatabaseSchema {
 
 							forEach(value, (value) => {
 								let struct = tempValue[0].serialize(value);
+
+								view.setUint16(
+									offset,
+									tempValue[0]._getByteLength(value)
+								);
+								offset += 2;
 
 								// Append each serialized byte
 								forEach(struct, (byte) => {
@@ -251,6 +294,7 @@ export default class DatabaseSchema {
 				let typeName = tempValue;
 				let decimalSpots = 0;
 				let stringLength = 0;
+				let dynamic = false;
 
 				// Should some customization be done to this type?
 				if (
@@ -265,6 +309,10 @@ export default class DatabaseSchema {
 				} else {
 					if (typeof typeName == "string") {
 						typeName = typeName.toLowerCase();
+
+						if (typeName == "string_big" || typeName == "string") {
+							dynamic = true;
+						}
 					} else if (typeof typeName._getByteLength == "function") {
 						typeName = "schema";
 					} else if (
@@ -324,35 +372,61 @@ export default class DatabaseSchema {
 						offset += typeData.byteLength;
 						break;
 					}
-					case "string": {
+					case "string_big": {
 						data[key] = "";
 
-						// Iterate over available letters
-						for (let i = 0; i < stringLength; i++) {
-							data[key] += String.fromCharCode(
-								view.getUint16(offset)
-							);
-							offset += typeData.byteLength;
+						if (dynamic) {
+							// Retrieve the length of the String
+							let strLength = view.getUint16(offset);
+							offset += 2;
+
+							// Iterate over all letters
+							for (let x = 0; x < strLength; x++) {
+								data[key] += String.fromCharCode(
+									view.getUint16(offset)
+								);
+								offset += typeData.byteLength;
+							}
+						} else {
+							// Iterate over available letters
+							for (let i = 0; i < stringLength; i++) {
+								data[key] += String.fromCharCode(
+									view.getUint16(offset)
+								);
+								offset += typeData.byteLength;
+							}
+
+							data[key] = data[key].replace(/\x00/g, "");
 						}
-
-						data[key] = data[key].replace(/\x00/g, "");
-
-						break;
 
 						break;
 					}
-					case "string_small": {
+					case "string": {
 						data[key] = "";
 
-						// Iterate over available letters
-						for (let i = 0; i < stringLength; i++) {
-							data[key] += String.fromCharCode(
-								view.getUint8(offset)
-							);
-							offset += typeData.byteLength;
-						}
+						if (dynamic) {
+							// Retrieve the length of the String
+							let strLength = view.getUint16(offset);
+							offset += 2;
 
-						data[key] = data[key].replace(/\x00/g, "");
+							// Iterate over all letters
+							for (let x = 0; x < strLength; x++) {
+								data[key] += String.fromCharCode(
+									view.getUint8(offset)
+								);
+								offset += typeData.byteLength;
+							}
+						} else {
+							// Iterate over available letters
+							for (let i = 0; i < stringLength; i++) {
+								data[key] += String.fromCharCode(
+									view.getUint8(offset)
+								);
+								offset += typeData.byteLength;
+							}
+
+							data[key] = data[key].replace(/\x00/g, "");
+						}
 
 						break;
 					}
@@ -362,8 +436,10 @@ export default class DatabaseSchema {
 						break;
 					}
 					case "schema": {
-						let length = tempValue._getByteLength();
+						let length = view.getUint16(offset);
 						let structBuffer = new Uint8Array(length);
+
+						offset += 2;
 
 						for (let i = 0; i < length; i++) {
 							structBuffer[i] = buffer[i + offset];
@@ -388,8 +464,10 @@ export default class DatabaseSchema {
 						offset += 2;
 
 						for (let x = 0; x < arrLength; x++) {
-							let length = tempValue[0]._getByteLength();
+							let length = view.getUint16(offset);
 							let structBuffer = new Uint8Array(length);
+
+							offset += 2;
 
 							for (let i = 0; i < length; i++) {
 								structBuffer[i] = buffer[i + offset];

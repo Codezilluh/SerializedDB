@@ -40,9 +40,9 @@ export default {
 	/**
 	 * A string for which each letter is two bytes. Usefull for storing advanced characters. I don't recommend using if you only need the basic 255.
 	 */
-	string: { byteLength: 2 },
+	string_big: { byteLength: 2 },
 	/**
 	 * A string for which each letter is a byte
 	 */
-	string_small: { byteLength: 1 }
+	string: { byteLength: 1 }
 };

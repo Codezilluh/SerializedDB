@@ -1,23 +1,36 @@
 import { Database, DatabaseSchema } from "./index.js";
 
+const pSchema = new DatabaseSchema({
+	x: "int32",
+	y: "int32",
+	username: "string_big"
+});
 const mainSchema = new DatabaseSchema({
 	dateNumber: "int64",
-	aBoolean: "boolean",
-	anotherBoolean: "boolean",
-	again: "boolean",
-	storedBoolean: "boolean",
 	lotsaDecimal: { type: "uint32", decimalSpots: 9 },
-	someonesName: { type: "string", stringLength: 5 }
+	player: [pSchema],
+	ps: [pSchema],
+	string: { type: "string", stringLength: 12 }
 });
 const db = new Database("test", "statistics", mainSchema);
 const data = {
 	dateNumber: Date.now(),
-	aBoolean: true,
-	anotherBoolean: false,
-	again: true,
-	storedBoolean: true,
-	lotsaDecimal: 8.564325893,
-	someonesName: "Bobby"
+	lotsaDecimal: 4.294965321,
+	player: [
+		{
+			x: 0,
+			y: 0,
+			username: "heyo"
+		}
+	],
+	ps: [
+		{
+			x: 50,
+			y: 64,
+			username: "supbros"
+		}
+	],
+	string: "This will get trimmed to 12 letters"
 };
 
 // I'm overwriting it for testing, best not to do this
@@ -25,7 +38,9 @@ db.template(data);
 
 let sizeDiff =
 	JSON.stringify(data).length - mainSchema.serialize(data).byteLength;
-let equal = JSON.stringify(data).length == JSON.stringify(db._load()).length;
+let equal =
+	JSON.stringify(data).length ==
+	JSON.stringify(mainSchema.deserialize(mainSchema.serialize(data))).length;
 let compressionRate =
 	mainSchema.serialize(data).byteLength / JSON.stringify(data).length;
 
@@ -42,3 +57,4 @@ console.log(
 		Math.round((1 - compressionRate) * 10000) / 100
 	}%`
 );
+console.log(mainSchema.deserialize(mainSchema.serialize(data)));
