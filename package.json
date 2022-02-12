@@ -1,6 +1,6 @@
 {
 	"name": "serialized-db",
-	"version": "1.1.1",
+	"version": "1.1.2",
 	"description": "A simple, compact, zero-dependency, efficiency-based database for JS devs",
 	"main": "index.js",
 	"scripts": {

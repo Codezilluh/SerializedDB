@@ -30,7 +30,7 @@ const data = {
 			username: "supbros"
 		}
 	],
-	string: "This will get trimmed to 12 letters"
+	string: "testing"
 };
 
 // I'm overwriting it for testing, best not to do this

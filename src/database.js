@@ -18,6 +18,14 @@ const followDotNotation = (_obj, param, value) => {
 		console.warn(messages.cantSetGet);
 	}
 };
+const toArrayBuffer = (buf) => {
+	const ab = new ArrayBuffer(buf.length);
+	const view = new Uint8Array(ab);
+	for (let i = 0; i < buf.length; ++i) {
+		view[i] = buf[i];
+	}
+	return ab;
+};
 
 export default class Database {
 	/**
@@ -149,7 +157,7 @@ export default class Database {
 			if (data == messages.noData || data == messages.dontEdit)
 				return false;
 
-			this._retrievedData = this._schema.deserialize(data);
+			this._retrievedData = this._schema.deserialize(toArrayBuffer(data));
 
 			return this._retrievedData;
 		} catch (e) {
@@ -174,7 +182,10 @@ export default class Database {
 			if (this._shouldBackup || noBak)
 				fs.writeFileSync(`${this._location}.bak`, data);
 
-			fs.writeFileSync(this._location, this._schema.serialize(object));
+			fs.writeFileSync(
+				this._location,
+				Buffer.from(this._schema.serialize(object))
+			);
 
 			return true;
 		} catch (e) {
@@ -197,3 +208,9 @@ export default class Database {
 		fs.rmSync(`${this._location}.bak`);
 	}
 }
+
+export const checkSchemaId = (buffer) => {
+	let view = new DataView(buffer);
+
+	return view.getInt32(0).toString(16).replace("-", "M");
+};

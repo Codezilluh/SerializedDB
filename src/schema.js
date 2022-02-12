@@ -3,14 +3,6 @@ import { filter, forEach } from "./optimized.js";
 import messages from "./messages.js";
 
 const sortEntries = (a, b) => a[0].localeCompare(b[0]);
-const toArrayBuffer = (buf) => {
-	const ab = new ArrayBuffer(buf.length);
-	const view = new Uint8Array(ab);
-	for (let i = 0; i < buf.length; ++i) {
-		view[i] = buf[i];
-	}
-	return ab;
-};
 const hashCode = (e) => {
 	var hash = 0;
 	for (var i = 0; i < e.length; i++) {
@@ -86,6 +78,12 @@ export default class DatabaseSchema {
 		return Math.ceil(length);
 	}
 
+	/**
+	 * This serializes data to the template
+	 *
+	 * @param {*} data The object you wish to serialize
+	 * @returns {ArrayBuffer} Serialized data
+	 */
 	serialize(data, r = false) {
 		let buf = new ArrayBuffer(this._getByteLength(data) + (r ? 0 : 4));
 		let view = new DataView(buf);
@@ -241,12 +239,10 @@ export default class DatabaseSchema {
 							break;
 						}
 						case "schema": {
-							let struct = tempValue.serialize(value, true);
-
-							view.setUint16(
-								offset,
-								tempValue._getByteLength(value)
+							let struct = new Uint8Array(
+								tempValue.serialize(value, true)
 							);
+							view.setUint16(offset, struct.byteLength);
 							offset += 2;
 
 							// Append each serialized byte
@@ -263,15 +259,11 @@ export default class DatabaseSchema {
 							offset += 2;
 
 							forEach(value, (value) => {
-								let struct = tempValue[0].serialize(
-									value,
-									true
+								let struct = new Uint8Array(
+									tempValue[0].serialize(value, true)
 								);
 
-								view.setUint16(
-									offset,
-									tempValue[0]._getByteLength(value)
-								);
+								view.setUint16(offset, struct.byteLength);
 								offset += 2;
 
 								// Append each serialized byte
@@ -302,11 +294,18 @@ export default class DatabaseSchema {
 			offset++;
 		}
 
-		return Buffer.from(buf);
+		return buf;
 	}
 
+	/**
+	 * Deserializes a serialized object
+	 *
+	 * @param {ArrayBuffer} buffer The buffer you want to deserialize
+	 * @returns The object
+	 */
 	deserialize(buffer, r = false) {
-		let view = new DataView(toArrayBuffer(buffer));
+		let view = new DataView(buffer);
+		let uintBuffer = new Uint8Array(buffer);
 		let offset = r ? 0 : 4;
 		let boolArrayKeys = [];
 		let data = {};
@@ -465,14 +464,14 @@ export default class DatabaseSchema {
 						offset += 2;
 
 						for (let i = 0; i < length; i++) {
-							structBuffer[i] = buffer[i + offset];
+							structBuffer[i] = uintBuffer[i + offset];
 						}
 
 						data = {
 							...data,
 							[key]: {
 								...tempValue.deserialize(
-									Buffer.from(structBuffer),
+									structBuffer.buffer,
 									true
 								)
 							}
@@ -494,14 +493,14 @@ export default class DatabaseSchema {
 							offset += 2;
 
 							for (let i = 0; i < length; i++) {
-								structBuffer[i] = buffer[i + offset];
+								structBuffer[i] = uintBuffer[i + offset];
 							}
 
 							if (!data[key]) data[key] = [];
 
 							data[key].push(
 								tempValue[0].deserialize(
-									Buffer.from(structBuffer),
+									structBuffer.buffer,
 									true
 								)
 							);
@@ -534,9 +533,3 @@ export default class DatabaseSchema {
 		return data;
 	}
 }
-
-export const checkSchemaId = (buffer) => {
-	let view = new DataView(toArrayBuffer(buffer));
-
-	return view.getInt32(0).toString(16).replace("-", "M");
-};
