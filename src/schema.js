@@ -51,9 +51,10 @@ export default class DatabaseSchema {
 				data
 			) {
 				length +=
-					(value[0]._getByteLength(data[key][0]) + 2) *
-						data[key].length +
-					2;
+					(data[key].length > 0
+						? (value[0]._getByteLength(data[key][0]) + 2) *
+						  data[key].length
+						: 0) + 2;
 
 				return;
 			}
