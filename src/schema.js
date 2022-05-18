@@ -17,10 +17,7 @@ export default class DatabaseSchema {
 	constructor(template) {
 		this._template = template;
 		this._boolCount = Object.keys(
-			filter(
-				template,
-				(e) => typeof e == "string" && e.toLowerCase() == "boolean"
-			)
+			filter(template, (e) => typeof e == "string" && e.toLowerCase() == "boolean")
 		).length;
 		this.schemaId = hashCode(JSON.stringify(template).replace(/"|,|:/g, ""))
 			.toString(16)
@@ -34,10 +31,7 @@ export default class DatabaseSchema {
 
 		forEach(Object.entries(this._template), ([key, value]) => {
 			// Is this a schema?
-			if (
-				typeof value == "object" &&
-				typeof value._getByteLength == "function"
-			) {
+			if (typeof value == "object" && typeof value._getByteLength == "function") {
 				length += value._getByteLength(data[key]) + 2;
 
 				return;
@@ -52,8 +46,7 @@ export default class DatabaseSchema {
 			) {
 				length +=
 					(data[key].length > 0
-						? (value[0]._getByteLength(data[key][0]) + 2) *
-						  data[key].length
+						? (value[0]._getByteLength(data[key][0]) + 2) * data[key].length
 						: 0) + 2;
 
 				return;
@@ -93,10 +86,7 @@ export default class DatabaseSchema {
 		let offset = 0;
 
 		if (!r) {
-			view.setInt32(
-				offset,
-				parseInt(this.schemaId.replace("M", "-"), 16)
-			);
+			view.setInt32(offset, parseInt(this.schemaId.replace("M", "-"), 16));
 			offset += 4;
 		}
 
@@ -129,15 +119,10 @@ export default class DatabaseSchema {
 						if (typeof typeName == "string") {
 							typeName = typeName.toLowerCase();
 
-							if (
-								typeName == "string_big" ||
-								typeName == "string"
-							) {
+							if (typeName == "string_big" || typeName == "string") {
 								dynamic = true;
 							}
-						} else if (
-							typeof typeName._getByteLength == "function"
-						) {
+						} else if (typeof typeName._getByteLength == "function") {
 							typeName = "schema";
 						} else if (
 							Array.isArray(typeName) &&
@@ -240,9 +225,7 @@ export default class DatabaseSchema {
 							break;
 						}
 						case "schema": {
-							let struct = new Uint8Array(
-								tempValue.serialize(value, true)
-							);
+							let struct = new Uint8Array(tempValue.serialize(value, true));
 							view.setUint16(offset, struct.byteLength);
 							offset += 2;
 
@@ -260,9 +243,7 @@ export default class DatabaseSchema {
 							offset += 2;
 
 							forEach(value, (value) => {
-								let struct = new Uint8Array(
-									tempValue[0].serialize(value, true)
-								);
+								let struct = new Uint8Array(tempValue[0].serialize(value, true));
 
 								view.setUint16(offset, struct.byteLength);
 								offset += 2;
@@ -284,8 +265,8 @@ export default class DatabaseSchema {
 		for (let i = 0; i < this._boolCount / 8; i++) {
 			let bitSum;
 			// Loop through the individual bits and combine them
-			for (let h = 0; h < boolArray.length - 8 * i; h++) {
-				if (!!boolArray[h]) {
+			for (let h = 0; h < Math.min(8, boolArray.length - 8 * i); h++) {
+				if (!!boolArray[h + 8 * i]) {
 					bitSum |= 1 << h % 8; // set bit at h to true
 				} else {
 					bitSum &= ~(1 << h % 8); // set bit at h to false
@@ -367,9 +348,7 @@ export default class DatabaseSchema {
 						break;
 					}
 					case "uint64": {
-						data[key] = parseInt(
-							view.getBigUint64(offset).toString()
-						);
+						data[key] = parseInt(view.getBigUint64(offset).toString());
 						offset += typeData.byteLength;
 						break;
 					}
@@ -389,9 +368,7 @@ export default class DatabaseSchema {
 						break;
 					}
 					case "int64": {
-						data[key] = parseInt(
-							view.getBigInt64(offset).toString()
-						);
+						data[key] = parseInt(view.getBigInt64(offset).toString());
 						offset += typeData.byteLength;
 						break;
 					}
@@ -405,17 +382,13 @@ export default class DatabaseSchema {
 
 							// Iterate over all letters
 							for (let x = 0; x < strLength; x++) {
-								data[key] += String.fromCharCode(
-									view.getUint16(offset)
-								);
+								data[key] += String.fromCharCode(view.getUint16(offset));
 								offset += typeData.byteLength;
 							}
 						} else {
 							// Iterate over available letters
 							for (let i = 0; i < stringLength; i++) {
-								data[key] += String.fromCharCode(
-									view.getUint16(offset)
-								);
+								data[key] += String.fromCharCode(view.getUint16(offset));
 								offset += typeData.byteLength;
 							}
 
@@ -434,17 +407,13 @@ export default class DatabaseSchema {
 
 							// Iterate over all letters
 							for (let x = 0; x < strLength; x++) {
-								data[key] += String.fromCharCode(
-									view.getUint8(offset)
-								);
+								data[key] += String.fromCharCode(view.getUint8(offset));
 								offset += typeData.byteLength;
 							}
 						} else {
 							// Iterate over available letters
 							for (let i = 0; i < stringLength; i++) {
-								data[key] += String.fromCharCode(
-									view.getUint8(offset)
-								);
+								data[key] += String.fromCharCode(view.getUint8(offset));
 								offset += typeData.byteLength;
 							}
 
@@ -471,10 +440,7 @@ export default class DatabaseSchema {
 						data = {
 							...data,
 							[key]: {
-								...tempValue.deserialize(
-									structBuffer.buffer,
-									true
-								)
+								...tempValue.deserialize(structBuffer.buffer, true)
 							}
 						};
 
@@ -499,12 +465,7 @@ export default class DatabaseSchema {
 
 							if (!data[key]) data[key] = [];
 
-							data[key].push(
-								tempValue[0].deserialize(
-									structBuffer.buffer,
-									true
-								)
-							);
+							data[key].push(tempValue[0].deserialize(structBuffer.buffer, true));
 
 							offset += length;
 						}
@@ -524,7 +485,7 @@ export default class DatabaseSchema {
 			let bitSum = view.getUint8(offset);
 
 			// Loop through the individual bits and find them
-			for (let h = 0; h < boolArrayKeys.length - 8 * i; h++) {
+			for (let h = 0; h < Math.min(8, boolArrayKeys.length - 8 * i); h++) {
 				data[boolArrayKeys[h + 8 * i]] = (bitSum & (1 << h % 32)) > 0;
 			}
 
